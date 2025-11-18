@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   BookOpen, 
   Target, 
@@ -17,7 +17,8 @@ import {
   Users,
   FileText,
   Scale,
-  Zap
+  Zap,
+  LogOut
 } from 'lucide-react';
 import { MOCK_DASHBOARD_STATS, MOCK_DISCIPLINES, MOCK_REVISIONS } from '@/lib/mock-data';
 import { Contest, ItemStatus, StudyType } from '@/lib/types';
@@ -26,8 +27,12 @@ import StudyTimer from '@/components/study/study-timer';
 import EditalView from '@/components/edital/edital-view';
 import QuestionsManager from '@/components/questions/questions-manager';
 import ArenaView from '@/components/arena/arena-view';
+import LoginPage from '@/components/auth/login-page';
+import { getUser, signOut } from '@/lib/supabase';
 
 export default function AprovAppPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [hasSelectedContest, setHasSelectedContest] = useState(false);
   const [selectedContest, setSelectedContest] = useState<Contest | null>(null);
   const [selectedView, setSelectedView] = useState<'dashboard' | 'study' | 'edital' | 'questions' | 'laws' | 'revisions' | 'arena'>('dashboard');
@@ -35,6 +40,33 @@ export default function AprovAppPage() {
   
   const stats = MOCK_DASHBOARD_STATS;
   const pendingRevisions = MOCK_REVISIONS.filter(r => !r.completed);
+
+  // Verificar autenticação ao carregar
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const user = await getUser();
+      setIsAuthenticated(!!user);
+    } catch (error) {
+      console.error('Erro ao verificar autenticação:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    setIsAuthenticated(false);
+    setHasSelectedContest(false);
+    setSelectedContest(null);
+  };
 
   const handleSelectContest = (contest: Contest) => {
     setSelectedContest(contest);
@@ -108,6 +140,25 @@ export default function AprovAppPage() {
     // Aqui você atualizaria o estado global/banco de dados
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-blue-50 dark:from-gray-950 dark:via-purple-950 dark:to-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-3xl mb-4 animate-pulse">
+            <BookOpen className="w-10 h-10 text-white" />
+          </div>
+          <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+  }
+
   // Show contest selector if no contest selected
   if (!hasSelectedContest) {
     return <ContestSelector onSelectContest={handleSelectContest} />;
@@ -140,6 +191,13 @@ export default function AprovAppPage() {
               >
                 <Play className="w-4 h-4" />
                 <span className="hidden sm:inline">Iniciar Estudo</span>
+              </button>
+              <button
+                onClick={handleLogout}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                title="Sair"
+              >
+                <LogOut className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
                 JD
