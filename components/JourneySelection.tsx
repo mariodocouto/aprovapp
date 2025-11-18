@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import type { Journey, Edital, StudyData, TopicStatus, StudySessionData, QuestionLog, Law, Article } from '../types.ts';
+import type { Journey, Edital, StudyData, TopicStatus, StudySessionData, QuestionLog } from '../types.ts';
 import { Card } from './common/Card.tsx';
-import { BookCopy, PlusCircle, LayoutDashboard, BookOpen, Gavel, Target, Bell, Users, ChevronDown, LogOut } from 'lucide-react';
+import { BookCopy, PlusCircle, LayoutDashboard, BookOpen, Target, Bell, Users, ChevronDown, LogOut } from 'lucide-react';
 import { supabase } from '../services/supabase.ts';
 import { User } from '@supabase/supabase-js';
 import { Setup } from './Setup.tsx';
@@ -12,11 +12,9 @@ import { QuestionsTracker } from './QuestionsTracker.tsx';
 import { Revisions } from './Revisions.tsx';
 import { Arena } from './Arena.tsx';
 import { StudySession } from './StudySession.tsx';
-import { LeiSeca } from './LeiSeca.tsx';
-// FIX: Corrected module path to use a relative reference for the Logo component.
 import { Logo } from './common/Logo.tsx';
 
-type View = 'dashboard' | 'edital' | 'questions' | 'revisions' | 'arena' | 'study' | 'lei-seca';
+type View = 'dashboard' | 'edital' | 'questions' | 'revisions' | 'arena' | 'study';
 
 const MainAppLayout: React.FC<{
     journeys: Journey[];
@@ -49,15 +47,73 @@ const MainAppLayout: React.FC<{
 
     const addStudySession = (session: StudySessionData) => {
         const { studyData } = activeJourney;
+        
+        // 1. Salva o registro de tempo (Histórico)
         const newSessions = [...studyData.sessions, session];
+
+        // 2. Atualiza o status do tópico no Edital (Marca o Checkbox correspondente)
+        let statusKey: keyof TopicStatus | null = null;
+        // Mapeia o tipo de estudo do cronômetro para o status do edital
+        if (session.type === 'pdf' || session.type === 'theory') statusKey = 'pdf';
+        else if (session.type === 'video') statusKey = 'video';
+        else if (session.type === 'law') statusKey = 'law';
+        else if (session.type === 'questions') statusKey = 'questions';
+        else if (session.type === 'summary') statusKey = 'summary';
+
+        let newTopicStatus = { ...studyData.topicStatus };
+
+        if (statusKey) {
+             newTopicStatus = {
+                ...newTopicStatus,
+                [session.topicId]: { 
+                    ...newTopicStatus[session.topicId], 
+                    [statusKey]: true, 
+                    pending: false 
+                }
+            };
+        } else {
+            // Se for um tipo genérico (ex: Revisão), apenas marca como não pendente
+             newTopicStatus = {
+                ...newTopicStatus,
+                [session.topicId]: { 
+                    ...newTopicStatus[session.topicId], 
+                    pending: false 
+                }
+            };
+        }
+
+        // 3. Gera as Revisões Futuras (Automação Inteligente)
+        const now = new Date();
+        const cycles = [
+            { days: 1, label: '24h' },
+            { days: 7, label: '7 dias' },
+            { days: 14, label: '14 dias' },
+            { days: 30, label: '30 dias' },
+            { days: 60, label: '60 dias' },
+            { days: 90, label: '90 dias' },
+        ];
+
         const newRevisions = [...studyData.revisions];
         
-        const now = new Date();
-        newRevisions.push({ id: `rev1-${session.id}`, topicId: session.topicId, dueDate: new Date(now.getTime() + 24 * 60 * 60 * 1000), completed: false });
-        newRevisions.push({ id: `rev7-${session.id}`, topicId: session.topicId, dueDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000), completed: false });
-        newRevisions.push({ id: `rev30-${session.id}`, topicId: session.topicId, dueDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), completed: false });
+        cycles.forEach(cycle => {
+            const dueDate = new Date(now);
+            dueDate.setDate(dueDate.getDate() + cycle.days);
+            
+            newRevisions.push({
+                id: `rev-${session.topicId}-${cycle.days}d-${Date.now()}`,
+                topicId: session.topicId,
+                dueDate: dueDate,
+                completed: false,
+                label: cycle.label
+            });
+        });
 
-        updateJourneyData({ sessions: newSessions, revisions: newRevisions });
+        // Salva tudo no banco de dados de uma vez
+        updateJourneyData({ 
+            sessions: newSessions,
+            topicStatus: newTopicStatus,
+            revisions: newRevisions
+        });
     };
 
     const addQuestionLog = (log: QuestionLog) => {
@@ -66,41 +122,55 @@ const MainAppLayout: React.FC<{
         updateJourneyData({ questions: newLogs });
     };
 
-    const updateTopicStatus = (topicId: string, status: Partial<TopicStatus>) => {
+    // Nova lógica inteligente de registro manual
+    const handleRegisterStudy = (topicId: string, methods: Partial<TopicStatus>) => {
         const { studyData } = activeJourney;
+        
+        // 1. Atualiza o status do tópico
         const newTopicStatus = {
             ...studyData.topicStatus,
-            [topicId]: { ...studyData.topicStatus[topicId], ...status, pending: false }
-        };
-        updateJourneyData({ topicStatus: newTopicStatus });
-    };
-
-    const addLaw = (law: Law) => {
-        const { studyData } = activeJourney;
-        const newLaws = [...studyData.laws, law];
-        updateJourneyData({ laws: newLaws });
-    };
-
-    const updateArticleStatus = (lawId: string, articleId: string, read: boolean) => {
-        const { studyData } = activeJourney;
-        const newLaws = studyData.laws.map(law => {
-            if (law.id === lawId) {
-                return {
-                    ...law,
-                    articles: law.articles.map(article => 
-                        article.id === articleId ? { ...article, read } : article
-                    ),
-                };
+            [topicId]: { 
+                ...studyData.topicStatus[topicId], 
+                ...methods, 
+                pending: false 
             }
-            return law;
+        };
+
+        // 2. Gera as datas de revisão
+        const now = new Date();
+        const cycles = [
+            { days: 1, label: '24h' },
+            { days: 7, label: '7 dias' },
+            { days: 14, label: '14 dias' },
+            { days: 30, label: '30 dias' },
+            { days: 60, label: '60 dias' },
+            { days: 90, label: '90 dias' },
+        ];
+
+        const newRevisions = [...studyData.revisions];
+        
+        cycles.forEach(cycle => {
+            const dueDate = new Date(now);
+            dueDate.setDate(dueDate.getDate() + cycle.days);
+            
+            newRevisions.push({
+                id: `rev-${topicId}-${cycle.days}d-${Date.now()}`,
+                topicId: topicId,
+                dueDate: dueDate,
+                completed: false,
+                label: cycle.label
+            });
         });
-        updateJourneyData({ laws: newLaws });
+
+        updateJourneyData({ 
+            topicStatus: newTopicStatus,
+            revisions: newRevisions
+        });
     };
 
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'edital', label: 'Edital', icon: BookOpen },
-        { id: 'lei-seca', label: 'Lei Seca', icon: Gavel },
         { id: 'questions', label: 'Questões', icon: Target },
         { id: 'revisions', label: 'Revisões', icon: Bell },
         { id: 'arena', label: 'Arena', icon: Users },
@@ -110,8 +180,7 @@ const MainAppLayout: React.FC<{
         const { edital, studyData } = activeJourney;
         switch (view) {
             case 'dashboard': return <Dashboard edital={edital} studyData={studyData} />;
-            case 'edital': return <EditalView edital={edital} topicStatus={studyData.topicStatus} updateTopicStatus={updateTopicStatus} />;
-            case 'lei-seca': return <LeiSeca laws={studyData.laws} onAddLaw={addLaw} onUpdateArticle={updateArticleStatus} />;
+            case 'edital': return <EditalView edital={edital} topicStatus={studyData.topicStatus} onRegisterStudy={handleRegisterStudy} />;
             case 'questions': return <QuestionsTracker studyData={studyData} addQuestionLog={addQuestionLog} edital={edital} />;
             case 'revisions': return <Revisions studyData={studyData} setStudyData={(updater) => {
                 const newStudyData = typeof updater === 'function' ? updater(studyData) : updater;
@@ -119,6 +188,7 @@ const MainAppLayout: React.FC<{
             }} edital={edital} />;
             case 'arena': return <Arena />;
             case 'study': return <StudySession edital={edital} onSessionEnd={addStudySession} backToDashboard={() => setView('dashboard')} />;
+            default: return <Dashboard edital={edital} studyData={studyData} />;
         }
     };
 
@@ -131,7 +201,7 @@ const MainAppLayout: React.FC<{
                         <button className="flex items-center gap-2 p-2 rounded-md hover:bg-neutral-800">
                             <div>
                                 <h2 className="text-md font-bold text-left">{activeJourney.edital.name}</h2>
-                                <p className="text-xs text-neutral-400 text-left">Policial Rodoviário</p>
+                                <p className="text-xs text-neutral-400 text-left">Jornada de Aprovação</p>
                             </div>
                             <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180" />
                         </button>
@@ -184,114 +254,126 @@ const MainAppLayout: React.FC<{
     );
 };
 
-const JourneyCard: React.FC<{ journey: Journey; onSelect: () => void; }> = ({ journey, onSelect }) => {
-    const totalTopics = journey.edital.disciplines.reduce((acc, d) => acc + d.topics.length, 0);
-    const completedTopics = Object.keys(journey.studyData.topicStatus).filter(topicId => !journey.studyData.topicStatus[topicId].pending).length;
-    const progress = totalTopics > 0 ? (completedTopics / totalTopics) * 100 : 0;
-
-    return (
-        <Card className="hover:border-primary transition-all cursor-pointer" onClick={onSelect}>
-            <h3 className="text-xl font-bold text-white mb-2">{journey.edital.name}</h3>
-            <p className="text-neutral-400 text-sm mb-4">Progresso: {completedTopics} de {totalTopics} tópicos</p>
-            <div className="w-full h-2.5 bg-neutral-700 rounded-full">
-                <div className="h-2.5 bg-gradient-to-r from-primary to-secondary rounded-full" style={{ width: `${progress}%` }}></div>
-            </div>
-             <p className="text-right text-sm font-semibold mt-1">{progress.toFixed(1)}%</p>
-        </Card>
-    );
-};
-
-interface JourneySelectionProps {
-    user: User;
-}
-
-export const JourneySelection: React.FC<JourneySelectionProps> = ({ user }) => {
+export const JourneySelection: React.FC<{ user: User }> = ({ user }) => {
     const [journeys, setJourneys] = useState<Journey[]>([]);
     const [activeJourneyId, setActiveJourneyId] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSetupMode, setIsSetupMode] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [isCreating, setIsCreating] = useState(false);
 
     useEffect(() => {
         const fetchJourneys = async () => {
-            const { data, error } = await supabase.from('journeys').select('*');
+            const { data, error } = await supabase
+                .from('journeys')
+                .select('*')
+                .eq('user_id', user.id);
+
             if (error) {
                 console.error("Error fetching journeys:", error);
-            } else {
-                const fetchedJourneys = data.map(item => ({
-                    id: item.id,
-                    edital: item.edital as Edital,
-                    studyData: item.study_data as StudyData,
-                }));
-                setJourneys(fetchedJourneys);
-                if (fetchedJourneys.length === 0) {
-                    setIsSetupMode(true);
+            } else if (data) {
+                const parsedJourneys = data.map((j: any) => ({
+                    id: j.id,
+                    edital: j.edital,
+                    studyData: j.study_data
+                })) as Journey[];
+                
+                setJourneys(parsedJourneys);
+                if (parsedJourneys.length > 0) {
+                    setActiveJourneyId(parsedJourneys[0].id);
+                } else {
+                    setIsCreating(true);
                 }
             }
-            setIsLoading(false);
+            setLoading(false);
         };
-        fetchJourneys();
-    }, []);
 
-    const handleJourneyCreated = (journey: Journey) => {
-        setJourneys(prev => [...prev, journey]);
-        setActiveJourneyId(journey.id);
-        setIsSetupMode(false);
+        fetchJourneys();
+    }, [user.id]);
+
+    const handleJourneyCreated = (newJourney: Journey) => {
+        setJourneys(prev => [...prev, newJourney]);
+        setActiveJourneyId(newJourney.id);
+        setIsCreating(false);
     };
+
+    const activeJourney = useMemo(() => 
+        journeys.find(j => j.id === activeJourneyId), 
+        [journeys, activeJourneyId]
+    );
 
     const updateActiveJourney = (updatedJourney: Journey) => {
         setJourneys(prev => prev.map(j => j.id === updatedJourney.id ? updatedJourney : j));
     };
 
-    const activeJourney = useMemo(() => {
-        return journeys.find(j => j.id === activeJourneyId) || null;
-    }, [journeys, activeJourneyId]);
-
-    if (isLoading) {
-        return <div className="flex h-screen w-full items-center justify-center bg-neutral-900"><p>Carregando jornadas...</p></div>
+    if (loading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center bg-neutral-900">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    <p className="text-white text-lg">Carregando seus estudos...</p>
+                </div>
+            </div>
+        );
     }
 
-    if (isSetupMode) {
-        return <Setup onJourneyCreated={handleJourneyCreated} userId={user.id} />;
+    if (isCreating || (!activeJourney && journeys.length === 0)) {
+        return (
+            <Setup 
+                userId={user.id} 
+                onJourneyCreated={handleJourneyCreated} 
+                onCancel={() => {
+                     if (journeys.length > 0) {
+                        setIsCreating(false);
+                        setActiveJourneyId(journeys[0].id);
+                    } else {
+                        // Se não tem jornadas, não pode cancelar. O botão deve apenas avisar ou fazer nada.
+                        // Idealmente o usuário pode fazer logout no Setup se estiver preso.
+                    }
+                }}
+            />
+        );
     }
 
-    if (activeJourney) {
-        return <MainAppLayout
-            journeys={journeys}
-            activeJourney={activeJourney}
-            setActiveJourneyId={setActiveJourneyId}
-            onStartNewJourney={() => { setActiveJourneyId(null); setIsSetupMode(true); }}
-            updateActiveJourney={updateActiveJourney}
-            user={user}
-        />
+    if (!activeJourney) {
+        // Caso onde existem jornadas, mas nenhuma selecionada (ex: usuario clicou em "Gerenciar Jornadas")
+        return (
+            <div className="flex h-screen w-full items-center justify-center bg-neutral-900 text-white flex-col gap-6">
+                <Logo className="h-16 w-16 text-primary" />
+                <h1 className="text-2xl font-bold">Selecione sua Jornada</h1>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg px-4">
+                    {journeys.map(j => (
+                        <button 
+                            key={j.id} 
+                            onClick={() => setActiveJourneyId(j.id)} 
+                            className="p-6 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all text-left group"
+                        >
+                            <h3 className="font-bold text-lg text-neutral-200 group-hover:text-primary transition-colors">{j.edital.name}</h3>
+                            <p className="text-sm text-neutral-500 mt-2">Continuar estudos</p>
+                        </button>
+                    ))}
+                     <button 
+                        onClick={() => setIsCreating(true)} 
+                        className="p-6 bg-neutral-800 hover:bg-neutral-700 border border-dashed border-neutral-600 hover:border-primary rounded-xl transition-all flex flex-col items-center justify-center text-neutral-400 hover:text-primary"
+                    >
+                        <PlusCircle className="h-8 w-8 mb-2" />
+                        <span className="font-semibold">Nova Jornada</span>
+                    </button>
+                </div>
+                
+                <button onClick={() => supabase.auth.signOut()} className="mt-8 text-neutral-500 hover:text-white flex items-center gap-2 text-sm">
+                    <LogOut className="h-4 w-4" /> Sair da conta
+                </button>
+            </div>
+        );
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-neutral-900 p-4">
-            <div className="w-full max-w-4xl text-center">
-                <BookCopy className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary text-transparent bg-clip-text">Minhas Jornadas</h1>
-                <p className="text-neutral-400 mb-8">Selecione um plano de estudos para continuar ou crie um novo.</p>
-                
-                <div className="space-y-6">
-                    {journeys.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {journeys.map(journey => (
-                                <JourneyCard key={journey.id} journey={journey} onSelect={() => setActiveJourneyId(journey.id)} />
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-neutral-500 py-8">Você ainda não tem nenhuma jornada. Que tal começar uma agora?</p>
-                    )}
-
-                    <button 
-                        onClick={() => setIsSetupMode(true)}
-                        className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-secondary text-white font-semibold py-3 px-8 rounded-lg shadow-lg hover:scale-105 transition-transform"
-                    >
-                        <PlusCircle className="h-5 w-5" />
-                        <span>Iniciar Nova Jornada</span>
-                    </button>
-                </div>
-            </div>
-        </div>
+        <MainAppLayout 
+            journeys={journeys}
+            activeJourney={activeJourney}
+            setActiveJourneyId={setActiveJourneyId}
+            onStartNewJourney={() => setIsCreating(true)}
+            updateActiveJourney={updateActiveJourney}
+            user={user}
+        />
     );
 };

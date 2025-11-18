@@ -2,7 +2,7 @@
 import React from 'react';
 import type { Edital, StudyData, Revision } from '../types.ts';
 import { Card } from './common/Card.tsx';
-import { Bell, Calendar } from 'lucide-react';
+import { Bell, Calendar, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 
 interface RevisionsProps {
     studyData: StudyData;
@@ -29,46 +29,84 @@ export const Revisions: React.FC<RevisionsProps> = ({ studyData, setStudyData, e
     };
     
     const now = new Date();
-    const pendingRevisions = studyData.revisions
-        .filter(r => !r.completed && new Date(r.dueDate) <= now)
-        .sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+    // Reset time to compare just dates for "Today"
+    const today = new Date();
+    today.setHours(0,0,0,0);
 
-    const upcomingRevisions = studyData.revisions
-        .filter(r => !r.completed && new Date(r.dueDate) > now)
-        .sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-        .slice(0, 10);
+    const pendingRevisions = studyData.revisions.filter(r => !r.completed).sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
-    const renderRevisionList = (revisions: Revision[]) => (
-        <ul className="space-y-3">
-            {revisions.map(revision => {
-                const topicInfo = topicMap.get(revision.topicId);
-                return (
-                    <li key={revision.id} className="bg-neutral-800 p-3 rounded-lg flex justify-between items-center transition-all hover:bg-neutral-700/80">
-                        <div>
-                            <p className="font-semibold">{topicInfo?.topicName}</p>
-                            <p className="text-sm text-neutral-400">{topicInfo?.disciplineName}</p>
-                            <p className="text-xs text-secondary mt-1">Vence em: {new Date(revision.dueDate).toLocaleDateString()}</p>
-                        </div>
-                        <button onClick={() => handleComplete(revision.id)} className="bg-primary text-white font-bold py-1 px-3 rounded-md text-sm hover:bg-primary-700 transition-colors">
-                            Revisado
-                        </button>
-                    </li>
-                );
-            })}
-             {revisions.length === 0 && <p className="text-center text-neutral-400 py-4">Nenhuma revisão aqui.</p>}
-        </ul>
-    )
+    const overdue = pendingRevisions.filter(r => new Date(r.dueDate) < today);
+    const dueToday = pendingRevisions.filter(r => {
+        const d = new Date(r.dueDate);
+        d.setHours(0,0,0,0);
+        return d.getTime() === today.getTime();
+    });
+    const upcoming = pendingRevisions.filter(r => {
+        const d = new Date(r.dueDate);
+        d.setHours(0,0,0,0);
+        return d.getTime() > today.getTime();
+    });
+
+    const getLabelColor = (label: string) => {
+        if (label.includes('24h')) return 'bg-purple-500/20 text-purple-300 border-purple-500/50';
+        if (label.includes('7 d')) return 'bg-blue-500/20 text-blue-300 border-blue-500/50';
+        if (label.includes('30 d')) return 'bg-green-500/20 text-green-300 border-green-500/50';
+        return 'bg-neutral-700 text-neutral-300 border-neutral-600';
+    };
+
+    const RevisionList = ({ items, title, icon: Icon, emptyMsg, type }: any) => (
+        <Card className="mb-6">
+            <h3 className={`text-xl font-bold mb-4 flex items-center gap-2 ${type === 'overdue' ? 'text-red-400' : type === 'today' ? 'text-yellow-400' : 'text-white'}`}>
+                <Icon className="h-6 w-6"/> {title} <span className="text-sm font-normal ml-2 opacity-60">({items.length})</span>
+            </h3>
+            <div className="space-y-3">
+                {items.length === 0 ? (
+                    <p className="text-neutral-500 italic py-4 text-center">{emptyMsg}</p>
+                ) : (
+                    items.map((rev: Revision) => {
+                        const info = topicMap.get(rev.topicId);
+                        const isLate = new Date(rev.dueDate) < today;
+                        
+                        return (
+                            <div key={rev.id} className="bg-neutral-800/50 border border-neutral-700/50 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-neutral-800 transition-all">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-1">
+                                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${getLabelColor(rev.label)}`}>
+                                            {rev.label}
+                                        </span>
+                                        <span className="text-xs text-neutral-500">{new Date(rev.dueDate).toLocaleDateString()}</span>
+                                    </div>
+                                    <h4 className="font-semibold text-neutral-200">{info?.topicName}</h4>
+                                    <p className="text-xs text-neutral-400">{info?.disciplineName}</p>
+                                </div>
+                                <button 
+                                    onClick={() => handleComplete(rev.id)}
+                                    className="w-full sm:w-auto px-4 py-2 bg-primary hover:bg-primary-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <CheckCircle2 size={16} /> Concluir
+                                </button>
+                            </div>
+                        );
+                    })
+                )}
+            </div>
+        </Card>
+    );
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Bell className="text-primary"/> Revisões Pendentes</h3>
-                {renderRevisionList(pendingRevisions)}
-            </Card>
-            <Card>
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Calendar className="text-primary"/> Próximas Revisões</h3>
-                {renderRevisionList(upcomingRevisions)}
-            </Card>
+        <div className="max-w-4xl mx-auto">
+            <div className="mb-8 text-center md:text-left">
+                <h2 className="text-2xl font-bold text-white">Central de Revisões</h2>
+                <p className="text-neutral-400">O segredo da aprovação é a repetição. Mantenha suas revisões em dia.</p>
+            </div>
+
+            {overdue.length > 0 && (
+                <RevisionList items={overdue} title="Atrasadas" icon={AlertCircle} type="overdue" emptyMsg="Nenhuma revisão atrasada." />
+            )}
+
+            <RevisionList items={dueToday} title="Para Hoje" icon={Bell} type="today" emptyMsg="Você está em dia por hoje!" />
+            
+            <RevisionList items={upcoming} title="Próximas" icon={Calendar} type="upcoming" emptyMsg="Nada agendado para o futuro próximo." />
         </div>
     );
 };

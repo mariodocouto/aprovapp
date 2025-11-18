@@ -3,10 +3,11 @@ import React, { useState } from 'react';
 import type { Edital, Journey, TopicStatus } from '../types.ts';
 import { supabase } from '../services/supabase.ts';
 import { mockPcrs, mockOab } from '../data/mockData.ts';
-import { UploadCloud, FileJson, Loader2 } from 'lucide-react';
+import { UploadCloud, FileJson, Loader2, ArrowLeft } from 'lucide-react';
 
 interface SetupProps {
     onJourneyCreated: (journey: Journey) => void;
+    onCancel: () => void;
     userId: string;
 }
 
@@ -17,7 +18,7 @@ const predefinedContests = [
     { name: 'Caixa (Em breve)', edital: null },
 ];
 
-export const Setup: React.FC<SetupProps> = ({ onJourneyCreated, userId }) => {
+export const Setup: React.FC<SetupProps> = ({ onJourneyCreated, onCancel, userId }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -29,8 +30,12 @@ export const Setup: React.FC<SetupProps> = ({ onJourneyCreated, userId }) => {
         edital.disciplines.forEach(d => {
             d.topics.forEach(t => {
                 initialStatus[t.id] = {
-                    pending: true, read: false, class_watched: false, summary: false, 
-                    law_read: false, revised: false, questions_done: false,
+                    pending: true,
+                    pdf: false,
+                    video: false,
+                    law: false,
+                    questions: false,
+                    summary: false,
                 };
             });
         });
@@ -78,7 +83,15 @@ export const Setup: React.FC<SetupProps> = ({ onJourneyCreated, userId }) => {
     
     return (
         <div className="min-h-screen flex items-center justify-center bg-neutral-900 p-4">
-            <div className="w-full max-w-2xl text-center">
+            <div className="w-full max-w-2xl text-center relative">
+                <button 
+                    onClick={onCancel}
+                    className="absolute left-0 top-0 -mt-12 md:-mt-0 md:-ml-12 p-2 text-neutral-400 hover:text-white transition-colors flex items-center gap-2"
+                >
+                    <ArrowLeft className="h-6 w-6" />
+                    <span className="hidden md:inline">Voltar</span>
+                </button>
+
                 <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary text-transparent bg-clip-text">Crie sua Nova Jornada</h1>
                 <p className="text-neutral-400 mb-8">Configure um novo plano de estudos para alcançar sua aprovação.</p>
                 

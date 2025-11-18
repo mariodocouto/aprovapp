@@ -1,3 +1,4 @@
+
 export interface Topic {
     id: string;
     name: string;
@@ -38,16 +39,17 @@ export interface Revision {
     topicId: string;
     dueDate: Date;
     completed: boolean;
+    label: string; // Ex: "24h", "7 dias", "30 dias"
 }
 
 export interface TopicStatus {
     pending: boolean;
-    read: boolean;
-    class_watched: boolean;
+    // Novos status detalhados
+    pdf: boolean;
+    video: boolean;
+    law: boolean;
+    questions: boolean;
     summary: boolean;
-    law_read: boolean;
-    revised: boolean;
-    questions_done: boolean;
 }
 
 export interface Article {
@@ -61,7 +63,6 @@ export interface Law {
     name: string;
     articles: Article[];
 }
-
 
 export interface StudyData {
     sessions: StudySessionData[];
