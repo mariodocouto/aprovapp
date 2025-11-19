@@ -6,25 +6,44 @@ interface LogoProps {
 
 /**
  * AprovApp Logo Component
- * Renders an SVG icon representing an open book with a checkmark, symbolizing successful studies.
+ * Renders the brand icon: A gradient rounded square with a stylized checkmark box inside.
  */
 export const Logo: React.FC<LogoProps> = ({ className }) => {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
+            viewBox="0 0 100 100"
             fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-label="AprovApp Logo"
             className={className}
+            aria-label="AprovApp Logo"
         >
-            {/* Represents the book */}
-            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-            {/* Represents the checkmark for approval/completion */}
-            <path d="m9 12 2 2 4-4" />
+            <defs>
+                <linearGradient id="logoGradient" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#4f46e5" /> {/* indigo-600 */}
+                    <stop offset="1" stopColor="#9333ea" /> {/* purple-600 */}
+                </linearGradient>
+            </defs>
+            
+            {/* Background: Rounded Square with Gradient */}
+            <rect width="100" height="100" rx="25" fill="url(#logoGradient)" />
+            
+            {/* Inner White Box Outline (Stylized) */}
+            <path 
+                d="M30 40 V30 H70 V70 H40" 
+                stroke="white" 
+                strokeWidth="6" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+            />
+            
+            {/* Checkmark */}
+            <path 
+                d="M35 55 L50 70 L80 35" 
+                stroke="white" 
+                strokeWidth="8" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+            />
         </svg>
     );
 };

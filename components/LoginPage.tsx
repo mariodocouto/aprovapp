@@ -135,9 +135,19 @@ export const LoginPage: React.FC = () => {
         <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-900 p-4">
             <div className="w-full max-w-md">
                 <div className="text-center mb-8">
-                    <Logo className="h-16 w-16 mx-auto mb-4 text-primary" />
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary text-transparent bg-clip-text">AprovApp</h1>
-                    <p className="text-neutral-400 mt-2">Sua jornada para a aprovação começa aqui.</p>
+                    {/* Logo atualizada e maior */}
+                    <Logo className="h-24 w-24 mx-auto mb-4 drop-shadow-2xl" />
+                    
+                    <h1 className="text-4xl font-bold text-white">AprovApp</h1>
+                    
+                    {/* Nova frase solicitada */}
+                    <p className="text-lg font-semibold text-white mt-2">
+                        O melhor App de controle de estudos do Brasil
+                    </p>
+                    
+                    <p className="text-neutral-400 mt-2 text-sm">
+                        Sua jornada para a aprovação começa aqui.
+                    </p>
                 </div>
                 
                 {!isSupabaseConfigured && (
@@ -257,18 +267,7 @@ export const LoginPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Configuração de Redirecionamento Helper */}
-            <div className="mt-8 w-full max-w-md">
-                <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2 text-neutral-400">
-                        <Info className="h-4 w-4" />
-                        <p className="text-xs font-semibold uppercase tracking-wider">Configuração de Redirecionamento (Supabase)</p>
-                    </div>
-                    <p className="text-xs text-neutral-500 mb-3">
-                        No painel do Supabase (Authentication {'>'} URL Configuration), configure o Site URL e Redirect URLs com o endereço do seu site publicado na Vercel (ex: <code>https://aprov-app-google.vercel.app</code>) para evitar erros de link quebrado.
-                    </p>
-                </div>
-            </div>
+            {/* Configuração de Redirecionamento Helper - Removido pois já está configurado */}
         </div>
     );
 };
