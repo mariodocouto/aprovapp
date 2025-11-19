@@ -40,12 +40,12 @@ export const Setup: React.FC<SetupProps> = ({ onJourneyCreated, onCancel, userId
             });
         });
 
+        // Laws removed from initial data structure
         const initialStudyData = {
             sessions: [],
             questions: [],
             revisions: [],
             topicStatus: initialStatus,
-            laws: [],
         };
         
         const { data, error } = await supabase

@@ -214,4 +214,36 @@ export const LoginPage: React.FC = () => {
                         <button
                             type="submit"
                             disabled={loading || !isSupabaseConfigured}
-                            className="w-full flex items-center justify-center gap-
+                            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-secondary text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        >
+                            {isSignUp ? <UserPlus className="h-5 w-5"/> : <LogIn className="h-5 w-5"/>}
+                            <span>{loading ? 'Processando...' : (isSignUp ? 'Criar Conta' : 'Entrar')}</span>
+                        </button>
+                    </form>
+                    
+                    <div className="text-center mt-6 pt-6 border-t border-neutral-700">
+                        <p className="text-sm text-neutral-400 mb-2">
+                            {isSignUp ? 'Já tem cadastro?' : 'Ainda não tem conta?'}
+                        </p>
+                        <button 
+                            onClick={() => { 
+                                setIsSignUp(!isSignUp); 
+                                setError(''); 
+                                setMessage(''); 
+                                setCpf('');
+                                setFullName('');
+                            }} 
+                            disabled={!isSupabaseConfigured}
+                            className="text-primary font-bold hover:text-white transition-colors disabled:opacity-50"
+                        >
+                            {isSignUp ? 'Fazer Login' : 'Criar Conta Gratuitamente'}
+                        </button>
+                    </div>
+                </div>
+                <div className="mt-8 text-center text-neutral-600 text-xs">
+                    <p>AprovApp v{APP_VERSION}</p>
+                </div>
+            </div>
+        </div>
+    );
+};

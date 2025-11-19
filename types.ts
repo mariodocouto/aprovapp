@@ -52,24 +52,12 @@ export interface TopicStatus {
     summary: boolean;
 }
 
-export interface Article {
-    id: string;
-    number: number;
-    read: boolean;
-}
-
-export interface Law {
-    id: string;
-    name: string;
-    articles: Article[];
-}
-
 export interface StudyData {
     sessions: StudySessionData[];
     questions: QuestionLog[];
     revisions: Revision[];
     topicStatus: { [topicId: string]: TopicStatus };
-    laws: Law[];
+    // Removed laws property
 }
 
 export interface Journey {

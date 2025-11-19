@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import type { Journey, Edital, StudyData, TopicStatus, StudySessionData, QuestionLog, Law } from '../types.ts';
+import type { Journey, Edital, StudyData, TopicStatus, StudySessionData, QuestionLog } from '../types.ts';
 import { BookCopy, PlusCircle, LayoutDashboard, BookOpen, Target, Bell, Users, ChevronDown, LogOut, Loader2 } from 'lucide-react';
 import { supabase } from '../services/supabase.ts';
 import { User } from '@supabase/supabase-js';
@@ -119,27 +119,6 @@ const MainAppLayout: React.FC<{
         const { studyData } = activeJourney;
         const newLogs = [...studyData.questions, log];
         updateJourneyData({ questions: newLogs });
-    };
-
-    const handleAddLaw = (law: Law) => {
-        const { studyData } = activeJourney;
-        const currentLaws = studyData.laws || [];
-        updateJourneyData({ laws: [...currentLaws, law] });
-    };
-
-    const handleUpdateArticle = (lawId: string, articleId: string, read: boolean) => {
-        const { studyData } = activeJourney;
-        const currentLaws = studyData.laws || [];
-        
-        const updatedLaws = currentLaws.map(l => {
-            if (l.id !== lawId) return l;
-            return {
-                ...l,
-                articles: l.articles.map(a => a.id === articleId ? { ...a, read } : a)
-            };
-        });
-        
-        updateJourneyData({ laws: updatedLaws });
     };
 
     // Nova lógica inteligente de registro manual
