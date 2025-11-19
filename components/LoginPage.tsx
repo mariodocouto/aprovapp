@@ -3,7 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase.ts';
 import { LogIn, UserPlus, AlertTriangle, User, FileText } from 'lucide-react';
 import { Logo } from './common/Logo.tsx';
-import metadata from '../metadata.json';
+
+// Versão hardcoded para evitar erro de importação de JSON e erro de módulo "@/metadata.json"
+const APP_VERSION = "1.2.1";
 
 export const LoginPage: React.FC = () => {
     const [emailOrCpf, setEmailOrCpf] = useState('');
@@ -212,36 +214,4 @@ export const LoginPage: React.FC = () => {
                         <button
                             type="submit"
                             disabled={loading || !isSupabaseConfigured}
-                            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-secondary text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                        >
-                            {isSignUp ? <UserPlus className="h-5 w-5"/> : <LogIn className="h-5 w-5"/>}
-                            <span>{loading ? 'Processando...' : (isSignUp ? 'Criar Conta' : 'Entrar')}</span>
-                        </button>
-                    </form>
-                    
-                    <div className="text-center mt-6 pt-6 border-t border-neutral-700">
-                        <p className="text-sm text-neutral-400 mb-2">
-                            {isSignUp ? 'Já tem cadastro?' : 'Ainda não tem conta?'}
-                        </p>
-                        <button 
-                            onClick={() => { 
-                                setIsSignUp(!isSignUp); 
-                                setError(''); 
-                                setMessage(''); 
-                                setCpf('');
-                                setFullName('');
-                            }} 
-                            disabled={!isSupabaseConfigured}
-                            className="text-primary font-bold hover:text-white transition-colors disabled:opacity-50"
-                        >
-                            {isSignUp ? 'Fazer Login' : 'Criar Conta Gratuitamente'}
-                        </button>
-                    </div>
-                </div>
-                <div className="mt-8 text-center text-neutral-600 text-xs">
-                    <p>AprovApp v{metadata.version}</p>
-                </div>
-            </div>
-        </div>
-    );
-};
+                            className="w-full flex items-center justify-center gap-

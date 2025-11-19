@@ -2,7 +2,7 @@
 import React from 'react';
 import type { Edital, StudyData, Revision } from '../types.ts';
 import { Card } from './common/Card.tsx';
-import { Bell, Calendar, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Bell, Calendar, CircleCheck, Clock, CircleAlert } from 'lucide-react';
 
 interface RevisionsProps {
     studyData: StudyData;
@@ -83,7 +83,7 @@ export const Revisions: React.FC<RevisionsProps> = ({ studyData, setStudyData, e
                                     onClick={() => handleComplete(rev.id)}
                                     className="w-full sm:w-auto px-4 py-2 bg-primary hover:bg-primary-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2"
                                 >
-                                    <CheckCircle2 size={16} /> Concluir
+                                    <CircleCheck size={16} /> Concluir
                                 </button>
                             </div>
                         );
@@ -101,7 +101,7 @@ export const Revisions: React.FC<RevisionsProps> = ({ studyData, setStudyData, e
             </div>
 
             {overdue.length > 0 && (
-                <RevisionList items={overdue} title="Atrasadas" icon={AlertCircle} type="overdue" emptyMsg="Nenhuma revisão atrasada." />
+                <RevisionList items={overdue} title="Atrasadas" icon={CircleAlert} type="overdue" emptyMsg="Nenhuma revisão atrasada." />
             )}
 
             <RevisionList items={dueToday} title="Para Hoje" icon={Bell} type="today" emptyMsg="Você está em dia por hoje!" />

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import type { Edital, TopicStatus } from '../types.ts';
-import { ChevronDown, ChevronRight, BookOpen, Monitor, FileText, CheckSquare, PenTool, X, Check } from 'lucide-react';
+import { ChevronDown, ChevronRight, BookOpen, Monitor, FileText, SquareCheck, Edit, X, Check } from 'lucide-react';
 
 interface EditalViewProps {
     edital: Edital;
@@ -13,8 +13,8 @@ const studyMethods = [
     { key: 'pdf', label: 'Leitura PDF', icon: BookOpen },
     { key: 'video', label: 'Videoaula', icon: Monitor },
     { key: 'law', label: 'Lei Seca', icon: FileText },
-    { key: 'summary', label: 'Resumo', icon: PenTool },
-    { key: 'questions', label: 'Questões', icon: CheckSquare },
+    { key: 'summary', label: 'Resumo', icon: Edit },
+    { key: 'questions', label: 'Questões', icon: SquareCheck },
 ] as const;
 
 // Componente Modal Interno
@@ -22,7 +22,7 @@ const StudyModal: React.FC<{
     isOpen: boolean; 
     onClose: () => void; 
     topicName: string;
-    currentStatus: TopicStatus;
+    currentStatus: Partial<TopicStatus>;
     onSave: (methods: Partial<TopicStatus>) => void;
 }> = ({ isOpen, onClose, topicName, currentStatus, onSave }) => {
     const [methods, setMethods] = useState<Partial<TopicStatus>>({});

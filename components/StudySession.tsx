@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import type { Edital, StudySessionData } from '../types.ts';
-import { Play, Pause, Square, Book, FileText, Target, Monitor, PenSquare, Repeat, ArrowLeft } from 'lucide-react';
+import { Play, Pause, Square, Book, FileText, Target, Monitor, SquarePen, Repeat, ArrowLeft } from 'lucide-react';
 
 interface StudySessionProps {
     edital: Edital;
@@ -15,7 +15,7 @@ const studyTypes = [
     { id: 'video', name: 'Videoaula', icon: Monitor },
     { id: 'questions', name: 'Questões', icon: Target },
     { id: 'law', name: 'Lei Seca', icon: FileText },
-    { id: 'summary', name: 'Resumo', icon: PenSquare },
+    { id: 'summary', name: 'Resumo', icon: SquarePen },
     { id: 'review', name: 'Revisão', icon: Repeat },
 ] as const;
 
