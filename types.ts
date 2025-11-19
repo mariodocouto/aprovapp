@@ -22,7 +22,7 @@ export interface StudySessionData {
     topicId: string;
     duration: number; // in seconds
     date: Date;
-    type: 'theory' | 'law' | 'questions' | 'pdf' | 'video' | 'review' | 'summary';
+    type: 'theory' | 'questions' | 'pdf' | 'video' | 'review' | 'summary' | 'law';
 }
 
 export interface QuestionLog {
@@ -76,4 +76,11 @@ export interface Journey {
     id: string;
     edital: Edital;
     studyData: StudyData;
+}
+
+export interface GeneratedQuestion {
+    question: string;
+    options: string[];
+    correctAnswer: number;
+    explanation: string;
 }

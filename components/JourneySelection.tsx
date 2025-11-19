@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import type { Journey, Edital, StudyData, TopicStatus, StudySessionData, QuestionLog } from '../types.ts';
-import { Card } from './common/Card.tsx';
-import { BookCopy, PlusCircle, LayoutDashboard, BookOpen, Target, Bell, Users, ChevronDown, LogOut } from 'lucide-react';
+import type { Journey, Edital, StudyData, TopicStatus, StudySessionData, QuestionLog, Law } from '../types.ts';
+import { BookCopy, PlusCircle, LayoutDashboard, BookOpen, Target, Bell, Users, ChevronDown, LogOut, Loader2 } from 'lucide-react';
 import { supabase } from '../services/supabase.ts';
 import { User } from '@supabase/supabase-js';
 import { Setup } from './Setup.tsx';
@@ -120,6 +119,27 @@ const MainAppLayout: React.FC<{
         const { studyData } = activeJourney;
         const newLogs = [...studyData.questions, log];
         updateJourneyData({ questions: newLogs });
+    };
+
+    const handleAddLaw = (law: Law) => {
+        const { studyData } = activeJourney;
+        const currentLaws = studyData.laws || [];
+        updateJourneyData({ laws: [...currentLaws, law] });
+    };
+
+    const handleUpdateArticle = (lawId: string, articleId: string, read: boolean) => {
+        const { studyData } = activeJourney;
+        const currentLaws = studyData.laws || [];
+        
+        const updatedLaws = currentLaws.map(l => {
+            if (l.id !== lawId) return l;
+            return {
+                ...l,
+                articles: l.articles.map(a => a.id === articleId ? { ...a, read } : a)
+            };
+        });
+        
+        updateJourneyData({ laws: updatedLaws });
     };
 
     // Nova lógica inteligente de registro manual
@@ -257,8 +277,8 @@ const MainAppLayout: React.FC<{
 export const JourneySelection: React.FC<{ user: User }> = ({ user }) => {
     const [journeys, setJourneys] = useState<Journey[]>([]);
     const [activeJourneyId, setActiveJourneyId] = useState<string | null>(null);
+    const [showSetup, setShowSetup] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [isCreating, setIsCreating] = useState(false);
 
     useEffect(() => {
         const fetchJourneys = async () => {
@@ -266,21 +286,21 @@ export const JourneySelection: React.FC<{ user: User }> = ({ user }) => {
                 .from('journeys')
                 .select('*')
                 .eq('user_id', user.id);
-
+            
             if (error) {
-                console.error("Error fetching journeys:", error);
+                console.error('Error fetching journeys:', error);
             } else if (data) {
-                const parsedJourneys = data.map((j: any) => ({
-                    id: j.id,
-                    edital: j.edital,
-                    studyData: j.study_data
+                const loadedJourneys = data.map(d => ({
+                    id: d.id,
+                    edital: d.edital,
+                    studyData: d.study_data
                 })) as Journey[];
                 
-                setJourneys(parsedJourneys);
-                if (parsedJourneys.length > 0) {
-                    setActiveJourneyId(parsedJourneys[0].id);
+                setJourneys(loadedJourneys);
+                if (loadedJourneys.length > 0) {
+                    setActiveJourneyId(loadedJourneys[0].id);
                 } else {
-                    setIsCreating(true);
+                    setShowSetup(true);
                 }
             }
             setLoading(false);
@@ -290,77 +310,46 @@ export const JourneySelection: React.FC<{ user: User }> = ({ user }) => {
     }, [user.id]);
 
     const handleJourneyCreated = (newJourney: Journey) => {
-        setJourneys(prev => [...prev, newJourney]);
+        setJourneys([...journeys, newJourney]);
         setActiveJourneyId(newJourney.id);
-        setIsCreating(false);
+        setShowSetup(false);
     };
 
     const activeJourney = useMemo(() => 
         journeys.find(j => j.id === activeJourneyId), 
-        [journeys, activeJourneyId]
-    );
+    [journeys, activeJourneyId]);
 
     const updateActiveJourney = (updatedJourney: Journey) => {
         setJourneys(prev => prev.map(j => j.id === updatedJourney.id ? updatedJourney : j));
     };
 
     if (loading) {
-        return (
+         return (
             <div className="flex h-screen w-full items-center justify-center bg-neutral-900">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                    <p className="text-white text-lg">Carregando seus estudos...</p>
-                </div>
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         );
     }
 
-    if (isCreating || (!activeJourney && journeys.length === 0)) {
+    if (showSetup) {
         return (
             <Setup 
-                userId={user.id} 
                 onJourneyCreated={handleJourneyCreated} 
                 onCancel={() => {
-                     if (journeys.length > 0) {
-                        setIsCreating(false);
-                        setActiveJourneyId(journeys[0].id);
-                    } else {
-                        // Se não tem jornadas, não pode cancelar. O botão deve apenas avisar ou fazer nada.
-                        // Idealmente o usuário pode fazer logout no Setup se estiver preso.
-                    }
+                    if (journeys.length > 0) setShowSetup(false);
                 }}
+                userId={user.id} 
             />
         );
     }
 
     if (!activeJourney) {
-        // Caso onde existem jornadas, mas nenhuma selecionada (ex: usuario clicou em "Gerenciar Jornadas")
         return (
-            <div className="flex h-screen w-full items-center justify-center bg-neutral-900 text-white flex-col gap-6">
-                <Logo className="h-16 w-16 text-primary" />
-                <h1 className="text-2xl font-bold">Selecione sua Jornada</h1>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg px-4">
-                    {journeys.map(j => (
-                        <button 
-                            key={j.id} 
-                            onClick={() => setActiveJourneyId(j.id)} 
-                            className="p-6 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all text-left group"
-                        >
-                            <h3 className="font-bold text-lg text-neutral-200 group-hover:text-primary transition-colors">{j.edital.name}</h3>
-                            <p className="text-sm text-neutral-500 mt-2">Continuar estudos</p>
-                        </button>
-                    ))}
-                     <button 
-                        onClick={() => setIsCreating(true)} 
-                        className="p-6 bg-neutral-800 hover:bg-neutral-700 border border-dashed border-neutral-600 hover:border-primary rounded-xl transition-all flex flex-col items-center justify-center text-neutral-400 hover:text-primary"
-                    >
-                        <PlusCircle className="h-8 w-8 mb-2" />
-                        <span className="font-semibold">Nova Jornada</span>
-                    </button>
-                </div>
-                
-                <button onClick={() => supabase.auth.signOut()} className="mt-8 text-neutral-500 hover:text-white flex items-center gap-2 text-sm">
-                    <LogOut className="h-4 w-4" /> Sair da conta
+             <div className="flex h-screen w-full items-center justify-center bg-neutral-900 flex-col gap-4">
+                <Logo className="h-16 w-16 mb-4"/>
+                <p className="text-neutral-400">Nenhuma jornada selecionada.</p>
+                <button onClick={() => setShowSetup(true)} className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-700 transition-colors">
+                    Criar Nova Jornada
                 </button>
             </div>
         );
@@ -371,7 +360,7 @@ export const JourneySelection: React.FC<{ user: User }> = ({ user }) => {
             journeys={journeys}
             activeJourney={activeJourney}
             setActiveJourneyId={setActiveJourneyId}
-            onStartNewJourney={() => setIsCreating(true)}
+            onStartNewJourney={() => setShowSetup(true)}
             updateActiveJourney={updateActiveJourney}
             user={user}
         />
